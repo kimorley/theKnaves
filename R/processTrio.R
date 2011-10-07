@@ -8,7 +8,7 @@ processTrio <- function(trioList,inDir=getwd(),outDir=getwd(),chrStart=1,chrStop
 	}
 	## Execute
 	# Process final report for each individual (stored in list of lists)
-	trioData <- mapply(processFinalReport,trioList,inDir=inDir,outDir=outDir,chrStart=chrStart,chrStop=chrStop,writeOut=writeQC)
+	trioData <- mapply(processFinalReport,trioList,inDir=inDir,outDir=outDir,chrStart=chrStart,chrStop=chrStop,writeOut=writeOut)
 	# If true, write out input files for PennCNV (data files and list files)
 	if (writeOut){
 		print("Writing input files for PennCNV")
