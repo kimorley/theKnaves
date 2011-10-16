@@ -9,7 +9,10 @@ jointPennCNV <- function(chrStart=1,chrStop=22,outDir=getwd()){
 		cmd <- paste("perl /nfs/team143/ddd/bin/penncnv/detect_cnv.pl -joint -hmm /nfs/team143/ddd/bin/penncnv/lib/hh550.hmm ",PFB,LIST,LOG," -out ",OUTFILE,sep="")
 		system(cmd)
 		if (file.exists(OUTFILE) ){
-			chrCalls <- read.table(OUTFILE,h=F,colClasses="character")
+			chrCalls <- try(read.table(OUTFILE,h=F,colClasses="character"))
+			if (inherits(chrCalls, 'try-error')){
+				chrCalls <- 0 
+			} 
 		}else{
 			chrCalls <- 0
 		}

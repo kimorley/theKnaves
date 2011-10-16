@@ -18,7 +18,7 @@ writePennCNVTrio <- function(trioData,outDir=getwd()){
 	for (i in 1:3){
 		ID <- strsplit(as.character(unique(trioData[,i]$data$SampleID)),"_")[[1]][length(strsplit(as.character(unique(trioData[,i]$data$SampleID)),"_")[[1]])]
 		trioIDs <- c(trioIDs,ID)
-		outData <- subset(trioData[,i]$data,select=c(SNPName,BAF,LRRadj))
+		outData <- subset(trioData[,i]$data,select=c(SNPName,BAF,LRR))
 		names(outData) <- c("Name",paste(ID,"A.B Allele Freq",sep=""),paste(ID,"A.Log R Ratio",sep=""))
 		write.table(outData,file=paste(outDir,"/",ID,".txt",sep=""),quote=F,row.names=F,sep = "\t")
 	}
