@@ -85,9 +85,9 @@ writeFilteredList <- function(filtList){
 
 #splitInheritance <- function(data){
 #	if (names(data) %in% c("CHR","START","STOP","COPYSTATE","STARTSNP","STOPSNP","NSNPS","LENGTH","IND")){
-#		offspring <- subset(data, ID == "offspring")
-#		parents <- subset(data, ID != "offspring")
-#		deNovoTest <- offspring$V1 %in% parents$V1
+#		offspring <- subset(data, IND == "offspring")
+#		parents <- subset(data, IND != "offspring")
+#		deNovoTest <- offspring$LENGTH %in% parents$LENGTH
 #		deNovoCNV <- offspring[!deNovoTest,]
 #		inheritCNV <- offspring[deNovoTest,]
 #	}else{
