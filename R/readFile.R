@@ -6,9 +6,16 @@
 #		(a) Map file with SNP name, position, and two alleles
 #		(b) Intensities (A and B) for each individual
 readIntensity <- function(FILENAME){
+	# Read and check
 	data <- read.table(FILENAME,h=T,colClasses="character",row.names=1)
-	map <- data[1:2]
+	if (sum(names(data)[1:2] == c("Coor", "Alleles")) != 2){
+		stop("Coor and Alleles in as headers in first two columns after SNP.")
+	}
+	map <- subset(data, select=c(Coor,Alleles))
 	intu <- data.frame(t(data[3:length(data)]))
+	if (length(row.names(intu))%%2 == 1){
+		stop("Number of intensity values is not divisible by two; expecting two values (A and B) per sample.")
+	}
 	output <- list(map=map,intu=intu)
 	return(output)
 }
