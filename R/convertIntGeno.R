@@ -2,7 +2,7 @@
 convertIntGeno <- function(intFile,gtuFile){
 	# Read in intensity and genotype files from GAPI
 	gapiInt <- readIntensity(intFile)
-	gapiGtu <- readCallConf(gtuFile)		
+	gapiGtu <- readCallConf(gtuFile)
 	# Function for converting intensities to R and theta, and merging with genotype call/confidence
 	convert <- function(INT,GTU){
 		# Split intensity data into A and B allele sets
