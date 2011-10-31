@@ -1,9 +1,23 @@
-calcLRRBAF <- function(data, cluster="GS", minClusterSize=3){
+calcLRRBAF <- function(data, chr, cluster="GS", minClusterSize=3){
+	# Checks
+	if (missing(data)){
+		stop("Must supply 'data' argument")
+	}
+	if (missing(chr)){
+		stop("Must supply 'chr' argument")
+	}
+	if (cluster==GS){
+		data(GSclusters)
+		GS <- GSclusters[[chr]]
+	}else{
+		GS <- cluster
+	}
+	# Setup and execution
 	if (sum(names(data) %in% names(GS))==length(GS)){
 		for (i in 1:length(data)){
 			target <- subset(data[[i]])
 			ref <- GS[[which(names(GS) == names(data)[i])]]	# Canonical cluster data for this SNP
-			if (ref$summary==0){
+			if (sum(ref$summary)==0){
 				warning(paste("No data in reference clusters; cannot generate cluster for ",names(data[i]),sep=""))	
 			}else if (min(ref$summary[2,]) < minClusterSize){
 				target <- cbind(target,rPred="NA",baf="NA")
@@ -59,4 +73,5 @@ calcLRRBAF <- function(data, cluster="GS", minClusterSize=3){
 	}else{
 		stop("Input data is different probe-set to canonical clusters.")
 	}
+	return(data)
 }		
