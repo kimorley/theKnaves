@@ -1,4 +1,4 @@
-generateClusters <- function(data, confThresh = 0.9, clusterStat = "median"){
+generateClusters <- function(data, confThresh = 0.99, clusterStat = "median"){
 	# Check
 	if (missing(data)){
 		stop("Must supply 'data' argument")

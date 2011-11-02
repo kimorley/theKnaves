@@ -23,16 +23,22 @@ readIntensity <- function(FILENAME){
 # [2] Read genotype call/confidence files
 #		This generates a list with an object for each SNP.
 #		Each object is a dataframe containing the genotype and call confidence for each individual
-readCallConf <- function(FILENAME){
+#		Default is to split IDs on underscore and take last element; select splitIDs=FALSE to avoid
+readCallConf <- function(FILENAME,splitIDs=TRUE){
 	data <- read.table(FILENAME,h=T,colClasses="character",row.names=1)
 	temp <- data.frame(t(data))
 	splitter <- function(x){
 		call <- substring(x,1,2)
 		conf <- substring(x,4,9)
 		callConf <- data.frame(call,conf)
-		ids <- sapply(row.names(temp),convertID)
-		row.names(callConf) <- ids
-		return(callConf)
+		if (splitIDs){
+			ids <- sapply(row.names(temp),convertID)
+			row.names(callConf) <- ids
+			return(callConf)
+		}else{
+			row.names(callConf) <- row.names(temp)
+			return(callConf)
+		}
 	}
 	output <- lapply(temp,splitter)
 	return(output)

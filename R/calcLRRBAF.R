@@ -1,22 +1,16 @@
-calcLRRBAF <- function(data, chr, cluster="GS", minClusterSize=3){
+calcLRRBAF <- function(data, cluster, minClusterSize=5){
 	# Checks
 	if (missing(data)){
 		stop("Must supply 'data' argument")
 	}
-	if (missing(chr)){
-		stop("Must supply 'chr' argument")
-	}
-	if (cluster==GS){
-		data(GSclusters)
-		GS <- GSclusters[[chr]]
-	}else{
-		GS <- cluster
+	if (missing(cluster)){
+		stop("Must supply 'cluster' argument")
 	}
 	# Setup and execution
-	if (sum(names(data) %in% names(GS))==length(GS)){
+	if (sum(names(data) %in% names(cluster))==length(cluster)){
 		for (i in 1:length(data)){
 			target <- subset(data[[i]])
-			ref <- GS[[which(names(GS) == names(data)[i])]]	# Canonical cluster data for this SNP
+			ref <- cluster[[which(names(cluster) == names(data)[i])]]	# Canonical cluster data for this SNP
 			if (sum(ref$summary)==0){
 				warning(paste("No data in reference clusters; cannot generate cluster for ",names(data[i]),sep=""))	
 			}else if (min(ref$summary[2,]) < minClusterSize){

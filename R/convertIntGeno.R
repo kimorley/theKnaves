@@ -1,5 +1,5 @@
 
-convertIntGeno <- function(intFile,gtuFile){
+convertIntGeno <- function(intFile,gtuFile,splitIDs=TRUE){
 	# Read in intensity and genotype files from GAPI
 	gapiInt <- readIntensity(intFile)
 	gapiGtu <- readCallConf(gtuFile)
@@ -9,10 +9,14 @@ convertIntGeno <- function(intFile,gtuFile){
 		index <- rep(c(0,1),(length(as.numeric(INT))/2))
 		use <- index==0
 		A <- INT[use]
-		namesA <- sapply(names(A),extractID)
 		use <- index==1
 		B <- INT[use]
-		namesB <- sapply(names(B),extractID)
+		namesA <- names(A)
+		namesB <- names(B)
+		if (splitIDs){	# Take last element of ID split on underscore
+			namesA <- sapply(names(A),extractID)
+			namesB <- sapply(names(B),extractID)
+		}
 		if (sum(namesA==namesB)==length(INT)/2){
 			# Calculate angle (theta) from signal intensities
 			t <- atan2(as.numeric(as.character(B)),as.numeric(as.character(A))) / (pi/2) # Make sure values range from 0 to 1
