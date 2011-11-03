@@ -1,0 +1,61 @@
+
+adjustLRR <- function(data, adjType, outDIR=getwd()){
+	if(missing(data)){
+		stop("Must supply 'data' argument.")
+	}
+	if (missing(adjType)){
+		stop("Must supply 'adjType' argument. Select from 'wave' or 'loess'.")
+	}
+	if (adjType=="wave"){
+		snpwave <- function (m, odir=getwd(), wFac=1.2){
+			source("/nfs/ddd0/software/R/scripts/load_all_packages.R")
+			cur = getwd()
+			Jpath = system.file("java", package = "CNsolidate")
+			wfile1 = paste(odir, "/waveTemp.txt", sep = "")
+			wfile2 = paste(odir, "/waveTemp1.txt", sep = "")
+			setwd(Jpath)
+			m = m[order(m$Chr, m$Position), ]
+			m=m[complete.cases(m),]
+			u = unique(m$Chr)
+			r = NULL
+			for (x in 1:length(u)) {
+				d = m[m$Chr == u[x], ]
+				me = median(d$lrr)
+				d$lrr = d$lrr - me
+				if (length(d[, 1]) > 5000) {
+					write.table(cbind(d$Chr, d$Position, d$Position, d$lrr), file = wfile1, sep = "\t", row.names = F, col.names = F, quote = F)
+					command = paste("java -Xmx1600m Wave -f ", wfile1, " -fa ", wFac, " > ", wfile2, sep = "")
+					system(command)
+					w = read.table(wfile2)
+					d = cbind(d, w[, 3] + me)
+					r = rbind(r, d)
+				}
+				else {
+					r = rbind(r, cbind(d,0))
+				}
+			}
+			names = colnames(m)
+			names = c(names, "waveLRR")
+			colnames(r) = names
+			command = paste("rm ", wfile1, " ", wfile2, sep = "")
+			system(command)
+			setwd(cur)
+			#write.table(r, file = file, sep = "\t", row.names = F, quote = F)
+			return(r)
+		}
+		outData <- snpwave(data)
+	}else if (adjType=="loess"){
+		loessAdj <- function(data){
+			data <- data[order(data$Chr, data$Position),]
+			adjData <- data.frame("pos"=seq(1,length(data$lrr)+100,1),"lrr"=c(rnorm(50,mean=median(data$lrr,na.rm=T),sd=(mad(data$lrr,na.rm=T)/1.4826)/4),data$lrr,rnorm(50,mean=median(data$lrr,na.rm=T),sd=(mad(data$lrr,na.rm=T)/1.4826)/4)))
+			adjData <- cbind(adjData,"weight"=(ifelse(abs(adjData$lrr) > 0.3,0,1)))  # Give weight of 0 to those observations with extreme values
+			fitModel <- loess(adjData$lrr ~ adjData$pos, span=0.1, weight=adjData$weight)
+			adjData <- cbind(adjData,"lrradj"=(adjData$lrr - predict(fitModel, data.frame(x=adjData$pos))))
+			data <- cbind(data,loessLRR=adjData$lrradj[51:(length(data$lrr)+50)])
+			return(data)
+		}
+		outData <- loessAdj(data)
+	}else{
+		stop("Invalid 'adjType' argument. Select from 'wave' or 'loess'.")
+	}
+}
