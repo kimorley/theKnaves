@@ -1,14 +1,12 @@
-calcLRRBAF <- function(data, CHR, clusterDIR=getwd(), minClusterSize=5){
+calcLRRBAF <- function(data, clusterDIR=getwd(), minClusterSize=5){
 	# Checks
 	if (missing(data)){
 		stop("Must supply 'data' argument")
 	}
-	if (missing(CHR)){
-		stop("Must supply 'CHR' argument")
-	}
 	# Setup and execution
 	for (i in 1:length(data)){
 		target <- subset(data[[i]])
+		# Generate canonical cluster for SNP
 		# Check whether canonical cluster file exists for this SNP and if so, load the model and summary list
 		if (file.exists(paste(clusterDIR,"/clusterFile-",names(data)[i],".gzip",sep=""))){
 			loadCluster <- try(load(paste(clusterDIR,"/clusterFile-",names(data)[i],".gzip",sep="")))
@@ -24,6 +22,8 @@ calcLRRBAF <- function(data, CHR, clusterDIR=getwd(), minClusterSize=5){
 			model <- 0
 			clusterData <- list(model=model,summary=summary)
 		}
+		
+		
 		# Call LRR and BAF for samples
 		if (sum(clusterData$summary)==0){
 			warning(paste("No data in reference clusters; cannot generate cluster for ",names(data)[i],sep=""))	
