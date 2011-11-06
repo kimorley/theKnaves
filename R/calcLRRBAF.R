@@ -1,34 +1,23 @@
-calcLRRBAF <- function(data, clusterDIR=getwd(), minClusterSize=5){
+calcLRRBAF <- function(data, clusterINTU, clusterGTU, minClusterSize=5){
 	# Checks
 	if (missing(data)){
 		stop("Must supply 'data' argument")
+	}
+	if (missing(clusterINTU)){
+		stop("Must supply location of intensity data for canonical samples.")
+	}
+	if (missing(clusterGTU)){
+		stop("Must supply location of genotype call and confidence data for canonical samples.")
 	}
 	# Setup and execution
 	for (i in 1:length(data)){
 		target <- subset(data[[i]])
 		# Generate canonical cluster for SNP
-		# Check whether canonical cluster file exists for this SNP and if so, load the model and summary list
-		if (file.exists(paste(clusterDIR,"/clusterFile-",names(data)[i],".gzip",sep=""))){
-			loadCluster <- try(load(paste(clusterDIR,"/clusterFile-",names(data)[i],".gzip",sep="")))
-			if (inherits(loadCluster, 'try-error')){
-				warning("Canonical cluster file for SNP ",names(data[i])," does not exist in specified location.")
-				summary <- 0
-				model <- 0
-				clusterData <- list(model=model,summary=summary)
-			}
-		}else{
-			warning("Canonical cluster file for SNP ",names(data[i])," does not exist in specified location.")
-			summary <- 0
-			model <- 0
-			clusterData <- list(model=model,summary=summary)
-		}
-		
-		
+		canonicalData <- convertRawSnp(SNP=names(data)[i],intFile=clusterINTU,gtuFile=clusterGTU)
+		canonicalCluster <- generateClusters(canonicalData)
+		clusterData <- canonicalCluster[[1]]
 		# Call LRR and BAF for samples
-		if (sum(clusterData$summary)==0){
-			warning(paste("No data in reference clusters; cannot generate cluster for ",names(data)[i],sep=""))	
-			target <- cbind(target,rPred="NA",baf="NA")
-		}else if (min(clusterData$summary[2,]) < minClusterSize){
+		if (min(clusterData$summary[2,]) < minClusterSize){
 			target <- cbind(target,rPred="NA",baf="NA")
 		}else{
 			target <- cbind(target,rPred=predict(clusterData$model,target))
