@@ -1,4 +1,4 @@
-generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat = "median"){
+generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat = "median", saveCluster=FALSE){
 	# Check
 	if (missing(data)){
 		stop("Must supply 'data' argument")
@@ -25,8 +25,10 @@ generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat =
 			summary <- 0
 			model <- 0
 			clusterData <- list(model=model,summary=summary)
-			# return(clusterData)
-			save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+			return(clusterData)
+			if (saveCluster){
+				save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+			}
 		}else{
 			summary <- tapply(newX$t,as.character(newX$call),clusterStat)
 			# Check whether the results are sensible
@@ -36,27 +38,35 @@ generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat =
 					summary <- 0
 					model <- 0
 					clusterData <- list(model=model,summary=summary)
-					# return(clusterData)
-					save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".gzip",sep=""),compress=TRUE)
+					return(clusterData)
+					if (saveCluster){
+						save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+					}
 				}else{
 					model <- lm(r ~ ns(t, knots=summary[2], Boundary.knots=c(summary[1],summary[3])), data=newX)
 					summary <- rbind(tapply(newX$t,as.character(newX$call),clusterStat),table(as.character(newX$call)))
 					clusterData <- list(model=model,summary=summary)
-					# return(clusterData)
-					save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".gzip",sep=""),compress=TRUE)
+					return(clusterData)
+					if (saveCluster){
+						save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+					}
 				}
 			}else if (length(summary)==2){
 				model <- lm(r ~ ns(t, Boundary.knots=c(summary[1],summary[2])), data=newX)
 				summary <- rbind(tapply(newX$t,as.character(newX$call),clusterStat),table(as.character(newX$call)))
 				clusterData <- list(model=model,summary=summary)
-				# return(clusterData)
-				save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".gzip",sep=""),compress=TRUE)
+				return(clusterData)
+				if (saveCluster){
+					save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+				}
 			}else if (length(summary)==1){
 				model <- lm(r ~ ns(t, Boundary.knots=c(min(t),max(t))), data=newX)
 				summary <- rbind(tapply(newX$t,as.character(newX$call),clusterStat),table(as.character(newX$call)))
 				clusterData <- list(model=model,summary=summary)
-				# return(clusterData)
-				save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".gzip",sep=""),compress=TRUE)
+				return(clusterData)
+				if (saveCluster){
+					save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+				}
 			}else{
 				warning("Number of genotypes should be between 1 and 3! Cannot generate canonical clusters.")
 			}
