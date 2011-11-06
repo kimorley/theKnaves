@@ -30,7 +30,7 @@ readCallConf <- function(FILENAME,splitIDs=TRUE){
 	splitter <- function(x){
 		call <- substring(x,1,2)
 		conf <- substring(x,4,9)
-		callConf <- data.frame(call,as.numeric(as.character(conf)))
+		callConf <- data.frame(call,conf)
 		if (splitIDs){
 			ids <- sapply(row.names(temp),convertID)
 			row.names(callConf) <- ids
