@@ -2,10 +2,10 @@
 # N.B. This is written for Illuminus output, not GenoSNP
 
 # [1] Read normalised intensity files
-#		This generates a list with two objects:
-#		(a) Map file with SNP name, position, and two alleles
-#		(b) Intensities (A and B) for each individual
-readIntensity <- function(FILENAME){
+#	This generates a list with two objects:
+#	(a) Map file with SNP name, position, and two alleles
+#	(b) Intensities (A and B) for each individual
+readRawIntu <- function(FILENAME){
 	# Read and check
 	data <- read.table(FILENAME,h=T,colClasses="character",row.names=1)
 	if (sum(names(data)[1:2] == c("Coor", "Alleles")) != 2){
@@ -21,10 +21,10 @@ readIntensity <- function(FILENAME){
 }
 
 # [2] Read genotype call/confidence files
-#		This generates a list with an object for each SNP.
-#		Each object is a dataframe containing the genotype and call confidence for each individual
-#		Default is to split IDs on underscore and take last element; select splitIDs=FALSE to avoid
-readCallConf <- function(FILENAME,splitIDs=TRUE){
+#	This generates a list with an object for each SNP.
+#	Each object is a dataframe containing the genotype and call confidence for each individual
+#	Default is to split IDs on underscore and take last two elements; select splitIDs=FALSE to avoid
+readRawGtu <- function(FILENAME,splitIDs=TRUE){
 	data <- read.table(FILENAME,h=T,colClasses="character",row.names=1)
 	temp <- data.frame(t(data))
 	splitter <- function(x){
@@ -32,7 +32,7 @@ readCallConf <- function(FILENAME,splitIDs=TRUE){
 		conf <- substring(x,4,9)
 		callConf <- data.frame(call,conf)
 		if (splitIDs){
-			ids <- sapply(row.names(temp),convertID)
+			ids <- sapply(row.names(temp),idSingle)
 			row.names(callConf) <- ids
 			return(callConf)
 		}else{
@@ -45,7 +45,6 @@ readCallConf <- function(FILENAME,splitIDs=TRUE){
 }
 
 # [3] Read normalised intensity file for specific SNP (for canonical cluster generation)
-
 readSnpIntu <- function(SNP,clusterINTU){
 	cmd <- paste( "awk '{ if (NR==1 || $1 == \"" ,SNP, "\") print $0 }' " ,clusterINTU, sep="")
 	data <- read.table(pipe(cmd),h=T,row.names=1, colClasses="character")
@@ -62,7 +61,6 @@ readSnpIntu <- function(SNP,clusterINTU){
 }
 
 # [4] Read genotype call/confidence for specific SNP (for canonical cluster generation)
-
 readSnpGtu <- function(SNP,clusterGTU,splitIDs=T){
 	cmd <- paste( "awk '{ if (NR==1 || $1 == \"" ,SNP, "\") print $0 }' " ,clusterGTU, sep="")
 	data <- read.table(pipe(cmd),h=T,row.names=1,colClasses="character")
@@ -72,7 +70,7 @@ readSnpGtu <- function(SNP,clusterGTU,splitIDs=T){
 		conf <- substring(x,4,9)
 		callConf <- data.frame(call,conf)
 		if (splitIDs){
-			ids <- sapply(row.names(temp),convertID)
+			ids <- sapply(row.names(temp),idSingle)
 			row.names(callConf) <- ids
 			return(callConf)
 		}else{
