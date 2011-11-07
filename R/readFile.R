@@ -61,7 +61,7 @@ readSnpIntu <- function(SNP,clusterINTU){
 }
 
 # [4] Read genotype call/confidence for specific SNP (for canonical cluster generation)
-readSnpGtu <- function(SNP,clusterGTU,splitIDs=T){
+readSnpGtu <- function(SNP,clusterGTU,splitIDs=TRUE){
 	cmd <- paste( "awk '{ if (NR==1 || $1 == \"" ,SNP, "\") print $0 }' " ,clusterGTU, sep="")
 	data <- read.table(pipe(cmd),h=T,row.names=1,colClasses="character")
 	temp <- data.frame(t(data))

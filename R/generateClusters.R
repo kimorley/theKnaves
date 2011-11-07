@@ -1,3 +1,4 @@
+# Generate canonical clusters given a data file containing R and theta (run convertRawFiles or convertRawSnp first)
 generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat = "median", saveCluster=FALSE){
 	# Check
 	if (missing(data)){
@@ -6,11 +7,7 @@ generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat =
 	if (!is.list(data)){
 		stop("Input data must be in list format")
 	}
-	if (clusterStat=="median"){
-		print("Generating median-based clusters")
-	}else if (clusterStat=="mean"){
-		print("Generating mean-based clusters")
-	}else{
+	if (clusterStat!="median" && clusterStat != "mean"){
 		stop("Invalid summary statistic for clusters.  Select either 'median' or 'mean'.")
 	}
 	if (confThresh < 0 | confThresh > 1){

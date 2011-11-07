@@ -1,13 +1,12 @@
-
-adjustLRR <- function(data, adjType, outDIR=getwd()){
+# Function for performing wavelet or loess transformation of LRR values
+# Wavelet is slight modification of function written by Tom Fitzgerald
+adjustLRR <- function(data, adjType="wave", outDIR=getwd()){
 	if(missing(data)){
 		stop("Must supply 'data' argument.")
 	}
-	if (missing(adjType)){
-		stop("Must supply 'adjType' argument. Select from 'wave' or 'loess'.")
-	}
 	if (adjType=="wave"){
 		snpwave <- function (m, odir=getwd(), wFac=1.2){
+			# This load other DDD packages needed to run this function
 			source("/nfs/ddd0/software/R/scripts/load_all_packages.R")
 			cur = getwd()
 			Jpath = system.file("java", package = "CNsolidate")

@@ -1,4 +1,9 @@
-calcLRRBAF <- function(data, clusterINTU, clusterGTU, minClusterSize=5){
+# Calculation of LRR and BAF
+# Function reads in list of dataframes (one for each SNP) and then generates canonical clusters from 
+# reference data and calculates LRR and BAF.
+# This function returns the data as a list, with or without the input data, of SNP-objects.
+# To save individual files use saveLRRBAF command.
+calcLRRBAF <- function(data, clusterINTU, clusterGTU, minClusterSize=5, keepOriginal=FALSE){
 	# Checks
 	if (missing(data)){
 		stop("Must supply 'data' argument")
@@ -10,15 +15,15 @@ calcLRRBAF <- function(data, clusterINTU, clusterGTU, minClusterSize=5){
 		stop("Must supply location of genotype call and confidence data for canonical samples.")
 	}
 	# Setup and execution
-	for (i in 1:length(data)){
+	for (i in 1:length(data)){	# Loop through each SNP
 		target <- subset(data[[i]])
 		# Generate canonical cluster for SNP
-		canonicalData <- convertRawSnp(SNP=names(data)[i],intFile=clusterINTU,gtuFile=clusterGTU)
+		canonicalData <- convertRawSnp(SNP=names(data)[i],intuFile=clusterINTU,gtuFile=clusterGTU)
 		canonicalCluster <- generateClusters(canonicalData)
 		clusterData <- canonicalCluster[[1]]
 		# Call LRR and BAF for samples
-		if (min(clusterData$summary[2,]) < minClusterSize){
-			target <- cbind(target,rPred="NA",baf="NA")
+		if (min(clusterData$summary[2,]) < minClusterSize){	# If we do not have enough samples, return nothing for this SNP
+			target <- cbind(target,rPred="NA",lrr="NA",baf="NA")
 		}else{
 			target <- cbind(target,rPred=predict(clusterData$model,target))
 			use <- as.character(target$call) %in% names(clusterData$summary[1,])	# Which ones have genotypes seen in the canonical clusters
@@ -66,7 +71,11 @@ calcLRRBAF <- function(data, clusterINTU, clusterGTU, minClusterSize=5){
 				target <- cbind(target,baf=NA)
 			}
 		}
-		data[[i]] <- target
+		if (keepOriginal){
+			data[[i]] <- target
+		}else{
+			data[[i]] <- subset(target,select=c(lrr,baf))
+		}
 	}
 	return(data)
 }		

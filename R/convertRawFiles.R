@@ -1,8 +1,8 @@
-
-convertIntGeno <- function(intFile,gtuFile,splitIDs=TRUE){
+# Converts raw intensity and call/confidence files to R and theta values
+convertRawFiles <- function(intuFile,gtuFile,splitIDs=TRUE){
 	# Read in intensity and genotype files from GAPI
-	gapiInt <- readIntensity(intFile)
-	gapiGtu <- readCallConf(gtuFile)
+	gapiInt <- readRawIntu(intuFile)
+	gapiGtu <- readRawGtu(gtuFile)
 	# Function for converting intensities to R and theta, and merging with genotype call/confidence
 	convert <- function(INT,GTU){
 		# Split intensity data into A and B allele sets
@@ -13,9 +13,9 @@ convertIntGeno <- function(intFile,gtuFile,splitIDs=TRUE){
 		B <- INT[use]
 		namesA <- names(A)
 		namesB <- names(B)
-		if (splitIDs){	# Take last element of ID split on underscore
-			namesA <- sapply(names(A),extractID)
-			namesB <- sapply(names(B),extractID)
+		if (splitIDs){	# Take last two elements of ID split on underscore
+			namesA <- sapply(names(A),idDouble)
+			namesB <- sapply(names(B),idDouble)
 		}
 		if (sum(namesA==namesB)==length(INT)/2){
 			# Calculate angle (theta) from signal intensities
