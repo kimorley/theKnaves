@@ -22,10 +22,10 @@ generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat =
 			summary <- 0
 			model <- 0
 			clusterData <- list(model=model,summary=summary)
-			return(clusterData)
 			if (saveCluster){
-				save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+				save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""))
 			}
+			return(clusterData)
 		}else{
 			summary <- tapply(newX$t,as.character(newX$call),clusterStat)
 			# Check whether the results are sensible
@@ -35,40 +35,58 @@ generateClusters <- function(data, DIR=getwd(), confThresh = 0.99, clusterStat =
 					summary <- 0
 					model <- 0
 					clusterData <- list(model=model,summary=summary)
-					return(clusterData)
 					if (saveCluster){
-						save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+						save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""))
 					}
+					return(clusterData)
 				}else{
-					model <- lm(r ~ ns(t, knots=summary[2], Boundary.knots=c(summary[1],summary[3])), data=newX)
+					modelTemp <- lm(r ~ ns(t, knots=summary[2], Boundary.knots=c(summary[1],summary[3])), data=newX, model=FALSE)
+					model <- list()
+					class(model) <- class(modelTemp)
+					model$terms <- modelTemp$terms
+					model$coefficients <- modelTemp$coefficients
+					model$rank <- modelTemp$rank
+					model$qr <- modelTemp$qr
+					save(model,file=paste(mySnp,"-test.RData",sep=""),compression_level=9)
 					summary <- rbind(tapply(newX$t,as.character(newX$call),clusterStat),table(as.character(newX$call)))
 					clusterData <- list(model=model,summary=summary)
-					return(clusterData)
 					if (saveCluster){
-						save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+						save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""))
 					}
+					return(clusterData)
 				}
 			}else if (length(summary)==2){
-				model <- lm(r ~ ns(t, Boundary.knots=c(summary[1],summary[2])), data=newX)
+				modelTemp <- lm(r ~ ns(t, Boundary.knots=c(summary[1],summary[2])), data=newX, model=FALSE)
+				model <- list()
+				class(model) <- class(modelTemp)
+				model$coefficients <- modelTemp$coefficients
+				model$terms <- modelTemp$terms
+				model$rank <- modelTemp$rank
+				model$qr <- modelTemp$qr
 				summary <- rbind(tapply(newX$t,as.character(newX$call),clusterStat),table(as.character(newX$call)))
 				clusterData <- list(model=model,summary=summary)
-				return(clusterData)
 				if (saveCluster){
-					save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+					save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""))
 				}
+				return(clusterData)
 			}else if (length(summary)==1){
-				model <- lm(r ~ ns(t, Boundary.knots=c(min(t),max(t))), data=newX)
+				modelTemp <- lm(r ~ ns(t, Boundary.knots=c(min(t),max(t))), data=newX, model=FALSE)
+				model <- list()
+				class(model) <- class(modelTemp)
+				model$coefficients <- modelTemp$coefficients
+				model$terms <- modelTemp$terms
+				model$rank <- modelTemp$rank
+				model$qr <- modelTemp$qr
 				summary <- rbind(tapply(newX$t,as.character(newX$call),clusterStat),table(as.character(newX$call)))
 				clusterData <- list(model=model,summary=summary)
-				return(clusterData)
 				if (saveCluster){
-					save(clusterData, file=paste(DIR,"/clusterFile-",CHR,"-",mySnp,".gzip",sep=""),compress=TRUE)
+					save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""))
 				}
+				return(clusterData)
 			}else{
 				warning("Number of genotypes should be between 1 and 3! Cannot generate canonical clusters.")
 			}
-		}
-		
+		}	
 	}
 	# Apply
 	output <- lapply(data,cluster)

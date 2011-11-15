@@ -47,17 +47,20 @@ readRawGtu <- function(FILENAME,splitIDs=TRUE){
 # [3] Read normalised intensity file for specific SNP (for canonical cluster generation)
 readSnpIntu <- function(SNP,clusterINTU){
 	cmd <- paste( "awk '{ if (NR==1 || $1 == \"" ,SNP, "\") print $0 }' " ,clusterINTU, sep="")
-	data <- read.table(pipe(cmd),h=T,row.names=1, colClasses="character")
-	if (sum(names(data)[1:2] == c("Coor", "Alleles")) != 2){
-		stop("Coor and Alleles expected as headers in first two columns after SNP.")
+	data <- try(read.table(pipe(cmd),h=T,row.names=1, colClasses="character"))
+	if (inherits(data, 'try-error')){
+		return(list(map=NA, intu=NA))
+	}else{
+		if (sum(names(data)[1:2] == c("Coor", "Alleles")) != 2){
+			stop("Coor and Alleles expected as headers in first two columns after SNP.")
+		}
+		map <- subset(data, select=c(Coor,Alleles))
+		intu <- data.frame(t(data[3:length(data)]))
+		if (length(row.names(intu))%%2 == 1){
+			stop("Number of intensity values is not divisible by two; expecting two values (A and B) per sample.")
+		}
+		return(list(map=map, intu=intu))
 	}
-	map <- subset(data, select=c(Coor,Alleles))
-	intu <- data.frame(t(data[3:length(data)]))
-	if (length(row.names(intu))%%2 == 1){
-		stop("Number of intensity values is not divisible by two; expecting two values (A and B) per sample.")
-	}
-	output <- list(map=map,intu=intu)
-	return(output)
 }
 
 # [4] Read genotype call/confidence for specific SNP (for canonical cluster generation)

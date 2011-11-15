@@ -3,11 +3,12 @@
 # reference data and calculates LRR and BAF.
 # This function returns the data as a list, with or without the input data, of SNP-objects.
 # To save individual files use saveLRRBAF command.
-calcLRRBAF <- function(data, clusterINTU, clusterGTU, minClusterSize=5, keepOriginal=FALSE){
+calcLRRBAF <- function(data, clusterPATH=NULL, clusterINTU=NULL, clusterGTU=NULL, minClusterSize=5, keepOriginal=FALSE){
 	# Checks
 	if (missing(data)){
 		stop("Must supply 'data' argument")
 	}
+	if (clusterPATH)
 	if (missing(clusterINTU)){
 		stop("Must supply location of intensity data for canonical samples.")
 	}

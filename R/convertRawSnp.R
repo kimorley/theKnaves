@@ -36,7 +36,7 @@ convertRawSnp <- function(SNP,intuFile,gtuFile,splitIDs=TRUE){
 		}
 	}
 	# Now apply the function to the two lists of intensity and genotype call data
-	if ( sum(names(gapiInt$intu) == names(gapiGtu))/length(names(gapiInt$intu) == names(gapiGtu)) == 1){
+	if (names(gapiInt$intu) == names(gapiGtu)){
 		intu <- gapiInt$intu
 		output <- mapply(convert,intu,gapiGtu,SIMPLIFY=F)
 		return(output)

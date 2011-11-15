@@ -1,6 +1,10 @@
 export(
 adjustLRR,
 calcLRRBAF,
+calculations,
+callLRRBAF,
+clusterSnp,
+convertLines,
 convertRawFiles,
 convertRawSnp,
 idDouble,
