@@ -9,12 +9,13 @@
 
 callLRRBAF <- function(gapiGTU, gapiINTU, clusterPATH, CHR, minClusterSize=1, keepOriginal=FALSE, splitIDs=TRUE){
 	# Setup and execution
-	snp <- names(eval(as.list(sys.call(-1))[[2]]))[as.numeric(gsub("[^0-9]", "", deparse(substitute(gapiGtu))))]
+	snp <- names(eval(as.list(sys.call(-1))[[2]]))[as.numeric(gsub("[^0-9]", "", deparse(substitute(gapiGTU))))]
 	mySnp <- unlist(strsplit(snp,"X"))[length(unlist(strsplit(snp,"X")))]
 	GTU <- gapiGTU
 	INT <- readSnpIntu(mySnp, gapiINTU)
 	INT <- INT$intu
 	if (is.na(INT)){
+		print(paste("WARNING: No intensity data available for SNP",mySnp,"in",gapiINTU,sep=" "))
 		callData <- calculations(INT, mySnp, clusterPATH, minClusterSize)	# This will return NA in this instance
 		return(callData)
 	}else{
