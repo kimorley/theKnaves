@@ -1,4 +1,7 @@
-
+# Function for saving LRR and BAF generated from canonical clusters
+# Files are saved for each individual with the filename "raw-CHR.txt" in the user directory
+# and will have the headers "SNP", "BAF", "LRR"
+#-------------------------------------------------------------------------------------------
 saveLRRBAF <- function(data, CHR, outDIR=getwd()){
 	if (missing(data)){
 		stop("Must provide data argument.")
@@ -23,9 +26,9 @@ saveLRRBAF <- function(data, CHR, outDIR=getwd()){
 	for (i in 1:length((names(tCombo)))){
 		output <- data.frame(row.names(lrrData),subset(bafData,select=names(tCombo[i])),subset(lrrData,select=names(tCombo[i])))
 		ID <- names(output)[2]
-		names(output) <- c("Name",paste(ID,"-",CHR,"A.B Allele Freq",sep=""),paste(ID,"-",CHR,"A.Log R Ratio",sep=""))
+		names(output) <- c("SNP","BAF","LRR")
 		dir.create(file.path(outDIR, ID), showWarnings = FALSE)
-		write.table(output,file=paste(outDIR,"/",ID,"/",ID,"-",CHR,".txt",sep=""),quote=F,row.names=F,sep = "\t")
+		write.table(output,file=paste(outDIR,"/",ID,"/","raw-",CHR,".txt",sep=""),quote=F,row.names=F,sep = "\t")
 	}
 }
 
