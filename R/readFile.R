@@ -1,5 +1,6 @@
 # FUNCTIONS FOR READING GAPI OUTPUT FILES
-# N.B. This is written for Illuminus output, not GenoSNP
+# N.B. These are written for Illuminus output, not GenoSNP
+#----------------------------------------------------------
 
 # [1] Read normalised intensity files
 #	This generates a list with two objects:
@@ -66,22 +67,26 @@ readSnpIntu <- function(SNP,clusterINTU){
 # [4] Read genotype call/confidence for specific SNP (for canonical cluster generation)
 readSnpGtu <- function(SNP,clusterGTU,splitIDs=TRUE){
 	cmd <- paste( "awk '{ if (NR==1 || $1 == \"" ,SNP, "\") print $0 }' " ,clusterGTU, sep="")
-	data <- read.table(pipe(cmd),h=T,row.names=1,colClasses="character")
-	temp <- data.frame(t(data))
-	splitter <- function(x){
-		call <- substring(x,1,2)
-		conf <- substring(x,4,9)
-		callConf <- data.frame(call,conf)
-		if (splitIDs){
-			ids <- sapply(row.names(temp),idSingle)
-			row.names(callConf) <- ids
-			return(callConf)
-		}else{
-			row.names(callConf) <- row.names(temp)
-			return(callConf)
+	data <- try(read.table(pipe(cmd),h=T,row.names=1, colClasses="character"))
+	if (inherits(data, 'try-error')){
+		return(NA)
+	}else{
+		temp <- data.frame(t(data))
+		splitter <- function(x){
+			call <- substring(x,1,2)
+			conf <- substring(x,4,9)
+			callConf <- data.frame(call,conf)
+			if (splitIDs){
+				ids <- sapply(row.names(temp),idSingle)
+				row.names(callConf) <- ids
+				return(callConf)
+			}else{
+				row.names(callConf) <- row.names(temp)
+				return(callConf)
+			}
 		}
+		output <- lapply(temp,splitter)
+		return(output)
 	}
-	output <- lapply(temp,splitter)
-	return(output)
 }
 		
