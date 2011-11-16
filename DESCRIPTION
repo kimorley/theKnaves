@@ -1,7 +1,7 @@
 Package: theKnaves
 Type: Package
 Title: Extraction and cleaning of CNV information from Illumina SNP-array
-Version: 0.7
+Version: 0.8
 Date: 2011-11-11
 Author: Katherine I. Morley and Tomas Fitzgerald
 Maintainer: <km5@sanger.ac.uk>

@@ -1,6 +1,5 @@
 export(
 adjustLRR,
-calcLRRBAF,
 calculations,
 callLRRBAF,
 clusterSnp,
