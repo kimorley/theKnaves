@@ -8,7 +8,7 @@
 #	[c] Directory for saving cluster files (*.RData)
 # 	clusterData <- readRawGtu(<FILENAME>)
 # 	lapply(clusterData, convertLines, gapiINTU=<FILENAME>, outDIR=<OUTDIR>)
-# N.B. Memory requirements scale with size of GTU file
+# N.B. Large memory requirements
 #-----------------------------------------------------------------------------------------------------
 
 convertLines <- function(gapiGTU, gapiINTU, outDIR=getwd(), splitIDs=TRUE, returnData=FALSE, returnInfo=TRUE){
@@ -22,7 +22,7 @@ convertLines <- function(gapiGTU, gapiINTU, outDIR=getwd(), splitIDs=TRUE, retur
 	INT <- INTall$intu
 	if (is.null(dim(INT))){
 		print(paste("WARNING: No intensity data available for SNP",mySnp,"in",gapiINTU,sep=" "))
-		gsCluster <- clusterSnp(x=NA, mySnp, DIR=writeDir)
+		gsCluster <- clusterSnp(x=NA, mySnp, DIR=outDIR)
 	}else{
 		# Split intensity data into A and B allele sets
 		index <- rep(c(0,1),(length(row.names(INT))/2))
