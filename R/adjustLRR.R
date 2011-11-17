@@ -6,11 +6,11 @@
 #----------------------------------------------------------------------
 adjustLRR <- function(dataFile, mapFile, adjType="wave"){
 	# Checks
-	if (missing(data)){
-		stop("Must supply 'data' argument.")
+	if (missing(dataFile)){
+		stop("Must supply 'data file' argument.")
 	}
-	if (missing(map)){
-		stop("Must supply 'map' argument.")
+	if (missing(mapFile)){
+		stop("Must supply 'map file' argument.")
 	}
 	# Preparation
 	data <- read.table(dataFile, h=T, colClasses=c("character","numeric","numeric"))
