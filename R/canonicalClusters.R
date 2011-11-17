@@ -87,7 +87,7 @@ clusterSnp <- function(x, mySnp, DIR=getwd(), confThresh = 0.99, clusterStat = "
 			return(clusterData)
 		}
 		if (returnInfo){
-			return(cbind(SNP=mySnp,FLAG="N"))
+			return(cbind(SNP=mySnp, FLAG="N", N_SAMPLES=0))
 		}
 	}else{
 		newX <- x[which( as.numeric(as.character(x$conf)) >= confThresh & as.character(x$call) != "NN"),]
@@ -106,7 +106,7 @@ clusterSnp <- function(x, mySnp, DIR=getwd(), confThresh = 0.99, clusterStat = "
 					return(clusterData)
 				}
 				if (returnInfo){
-					return(cbind(SNP=mySnp,FLAG="F"))
+					return(cbind(SNP=mySnp, FLAG="F", N_SAMPLES=sum(summary[2,])))
 				}
 			}else{
 				temp <- lm(r ~ ns(t, knots=summary[2], Boundary.knots=c(summary[1],summary[3])), data=newX, model=FALSE)
@@ -121,7 +121,7 @@ clusterSnp <- function(x, mySnp, DIR=getwd(), confThresh = 0.99, clusterStat = "
 					return(clusterData)
 				}
 				if (returnInfo){
-					return(cbind(SNP=mySnp,FLAG="P"))
+					return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=0))
 				}
 			}
 		}else if (length(summary)==2){
@@ -137,7 +137,7 @@ clusterSnp <- function(x, mySnp, DIR=getwd(), confThresh = 0.99, clusterStat = "
 				return(clusterData)
 			}
 			if (returnInfo){
-				return(cbind(SNP=mySnp,FLAG="P"))
+				return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,])))
 			}
 		}else if (length(summary)==1){
 			temp <- lm(r ~ ns(t, Boundary.knots=c(min(t),max(t))), data=newX, model=FALSE)
@@ -152,7 +152,7 @@ clusterSnp <- function(x, mySnp, DIR=getwd(), confThresh = 0.99, clusterStat = "
 				return(clusterData)
 			}
 			if (returnInfo){
-				return(cbind(SNP=mySnp,FLAG="P"))
+				return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,])))
 			}
 		}else{
 			print(paste("WARNING: Number of genotypes should be between 1 and 3! Cannot generate canonical clusters for ",mySnp,".",sep=""))
@@ -166,7 +166,7 @@ clusterSnp <- function(x, mySnp, DIR=getwd(), confThresh = 0.99, clusterStat = "
 				return(clusterData)
 			}
 			if (returnInfo){
-				return(cbind(SNP=mySnp,FLAG="N"))
+				return(cbind(SNP=mySnp, FLAG="N", N_SAMPLES=0))
 			}
 		}
 	}
