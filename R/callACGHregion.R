@@ -1,4 +1,60 @@
 # Function for calling region identified by aCGH in SNP array data.
+
+
+
+acgh <- read.table("aCGH-results.txt", as.is=TRUE, header=TRUE, sep="\t")
+trioList <- scan("trio.txt",what=c("character","character","character"))
+pfb <- read.table("scotland-PFB.txt",h=F,colClasses=c("character","numeric","numeric","numeric"))
+pfb <- pfb[order(pfb[,2], pfb[,3]),]
+names(pfb) <- c("snp","chr","position","pfb")
+
+chromosomes <- sort(as.numeric(sapply(unique(acgh$chr),function(x){unlist(strsplit(x,"r"))[2]})))
+
+for (i in sort(as.numeric(sapply(unique(acgh$chr),function(x){unlist(strsplit(x,"r"))[2]})))){
+	# Read file for individual and QC
+	for (i in trioList){
+		adjData <- adjustLRR(dataFile=paste(i,"/raw-",CHR,".txt",sep=""),mapFile=paste("chr",CHR,".map",sep=""))
+		writePennCNVdata(adjData, CHR, i)
+	}
+	# Write out trio file list in PennCNV format
+	writePennCNVlists(trioList, CHR)
+}
+
+CHR <- 1
+START <- 202259070
+STOP <- 202272604
+currentRegion <- subset(pfb, chr==CHR & position >= START & position <= STOP)
+
+if (length(currentRegion[,1]) < 2){
+	print(paste("Not enough probes to call region ",CHR,":","START","-","STOP",sep=""))
+}else{
+	# Call region
+}
+
+pennCnvLogLik <- function(trioIDs, cnvID, STARTSNP, ENDSNP, CHR, outDIR=getwd()){
+	PFB <- paste(" -pfb ",outDIR,"/region-pfb.txt",sep="") 
+	LIST <- paste(" --list ", outDIR,"/","indList-",CHR,".txt ",sep="") 
+	LOG <- paste(" -valilog ", outDIR,"/",cnvID,"-loglik.log ",sep="") 
+	REGION <- paste("-delfreq 0.001 -dupfreq 0.0001 -startsnp", STARTSNP, "-endsnp", ENDSNP, sep=" ")
+	OUTFILE <- paste(outDIR,"/",cnvID,".loglik",sep="")
+	cmd <- paste("perl /nfs/team143/ddd/bin/penncnv/detect_cnv.pl -validate -hmm /nfs/team143/ddd/bin/penncnv/lib/hh550.hmm",PFB,LIST,LOG,"-out",OUTFILE,REGION,sep=" ")
+	system(cmd)
+	if (file.exists(paste(outDIR,"/",cnvID,"-loglik.log",sep="")) ){
+		cnCall <- try(read.table(paste(outDIR,"/",cnvID,"-loglik.log",sep=""),h=F,colClasses="character"))
+		names(cnCall) <- c("STARTSNP","ENDSNP","CN0","CN1","CN2","CN3","CN4")
+		row.names(cnCall) <- c(trioIDs[3],trioIDs[2],trioIDs[1])
+		if (inherits(cnCall, 'try-error')){
+			cnCall <- 0 
+		} 
+	}else{
+		cnCall <- 0
+	}
+	return(cnCall)
+}
+
+test <- pennCnvLogLik(trioList, "test", currentRegion$snp[which(currentRegion$position==min(currentRegion$position))], currentRegion$snp[which(currentRegion$position==max(currentRegion$position))], CHR)
+
+
 callACGHregion <- function(){
 	stop("This function in need of SERIOUS development. Don't even attempt to use it!")
 	# Input variables
@@ -63,26 +119,7 @@ callACGHregion <- function(){
 		return(cnCall)
 	}
 	
-	pennCnvLogLik <- function(){
-		PFB <- paste(" -pfb ",DIR,"/pfb.txt",sep="") 
-		LIST <- paste(" --list ", DIR,"/","indList.txt ",sep="") 
-		LOG <- paste(" -valilog ", DIR,"/",CHR,"-loglik.log ",sep="") 
-		REGION <- paste("-delfreq 0.001 -dupfreq 0.0001-startsnp", STARTSNP, "-endsnp", ENDSNP, sep="")
-		OUTFILE <- paste(DIR,"/",CHR,"-",START,"-",STOP,".loglik",sep="")
-		cmd <- paste("perl /nfs/team143/ddd/bin/penncnv/detect_cnv.pl -validate -hmm /nfs/team143/ddd/bin/penncnv/lib/hh550.hmm",PFB,LIST,LOG,"-out",OUTFILE,REGION,sep=" ")
-		system(cmd)
-		if (file.exists(OUTFILE) ){
-			cnCall <- try(read.table(OUTFILE,h=F,colClasses="character"))
-			if (inherits(cnCall, 'try-error')){
-				cnCall <- 0 
-			} 
-		}else{
-			cnCall <- 0
-		}
-		return(cnCall)
-	}
-	
-	
+
 	# Use the PFB to limit the range of SNPs we look at
 	subsetPfb <- function(CHR, START, STOP, NPROBES, probePortion=0.5, DIR=getwd()){
 		pfb <- read.table(paste("/lustre/scratch103/sanger/km5/ddd/snp-cnv/scotland/penncnv_in/pfb/scotland-PFB-",CHR,".txt",sep=""),h=F,colClasses=c("character","numeric","numeric","numeric"))
@@ -186,6 +223,10 @@ callACGHregion <- function(){
 		
 	}
 
+	
+# Write out PFB file for region
+	write.table(currentRegion, file="region-pfb.txt", row.names=F, col.names=F, quote=F, sep = "\t")
+	
 
 	# Then compute likelihood ratio
 	# Output summary info
