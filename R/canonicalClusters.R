@@ -21,8 +21,7 @@ convertLines <- function(gapiGTU, gapiINTU, outDIR=getwd(), splitIDs=TRUE, retur
 	INTall <- readSnpIntu(mySnp, gapiINTU)
 	INT <- INTall$intu
 	alleles <- unlist(INTall$map$Alleles)
-	print(paste(mySnp,alleles))
-	if (is.null(dim(INT))){
+	if (is.na(sum(as.numeric(unlist(INT))))){
 		print(paste("WARNING: No intensity data available for SNP",mySnp,"in",gapiINTU,sep=" "))
 		gsCluster <- clusterSnp(x=NA, mySnp, DIR=outDIR)
 	}else{
@@ -87,8 +86,8 @@ clusterSnp <- function(data, mySnp, alleles, DIR=getwd(), confThresh = 0.99, clu
 		stop("Cannot return cluster results and info - choose one option.")
 	}
 	# Body
-	if (is.null(dim(data))){
-		clusterData <- list(model=NULL, summary=NULL, alleles=alleles)
+	if (is.null(data)){
+		clusterData <- list(model=NA, summary=NA, alleles=alleles)
 		if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep="")) }
 		if (returnCluster){ return(clusterData) }
 		if (returnInfo){ return(cbind(SNP=mySnp, FLAG="N", N_SAMPLES=0)) }
@@ -96,136 +95,81 @@ clusterSnp <- function(data, mySnp, alleles, DIR=getwd(), confThresh = 0.99, clu
 		cc <- data[which( as.numeric(as.character(data$conf)) >= confThresh & as.character(data$call) != "NN"),]	# Complete cases with high confidence
 		subsetGenotypes <- function(genotype, data){
 			xx <- subset(data, call==genotype)
-			if (dim(xx)[1] < 5){	# Remove genotypes with less than five samples in the cluster
-				return(data.frame(r=numeric(0), t=numeric(0), call=character(0), conf=numeric(0)))
-			}else{
+			if (length(xx[,1]) >= 5){	# Remove genotypes with less than five samples in the cluster
 				return(xx)
 			}
 		}
 		ccList <- lapply(unique(as.character(cc$call)), subsetGenotypes, data=cc)
+		names(ccList) <- unique(as.character(cc$call))
 		cc <- do.call(rbind,ccList)
-		summary <- data.frame(rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call))))
-		
-		aa <- subsetGenotypes(cc, paste(substr(alleles,1,1),substr(alleles,1,1),sep=""))
-		ab <- subsetGenotypes(cc, paste(substr(alleles,1,1),substr(alleles,2,2),sep=""))
-		bb <- subsetGenotypes(cc, paste(substr(alleles,2,2),substr(alleles,2,2),sep=""))
-		
-		if ( dim(aa)[1] != 0 && dim(ab)[1] != 0 && dim(bb)[1] != 0 ){	# All three genotypes present
-			if ( median(ab$t) < median(aa$t) || median(ab$t) > median(bb$t) ){
-				# Theta value for heterozygote is smaller than AA homozygote or larger than BB homozygote so we don't want to call from this
-				clusterData <- list(model=NULL, summary=NULL, alleles=alleles)
-				if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-				if (returnCluster){ return(clusterData) }
-				if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=0)) }
-			}else{
-				# Ellipses for BAF calculation
-				aaBounds <- predict(ellipsoidhull(as.matrix(cbind(aa$t,aa$r))))
-				abBounds <- predict(ellipsoidhull(as.matrix(cbind(ab$t,ab$r))))
-				bbBounds <- predict(ellipsoidhull(as.matrix(cbind(bb$t,bb$r))))
-				# Spline linear model for LRR calculation
-				temp <- lm(r ~ ns(t, knots=median(ab$t), Boundary.knots=c(median(aa$t),median(bb$t))), data=cc, model=FALSE)
-				model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
-				class(model) <- class(temp)
-				# Summary of medians and genotype counts
-				summary <- rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call)))
-				# Combine info and save/return
-				clusterData <- list(aaBounds=aaBounds, abBounds=abBounds, bbBounds=bbBounds, summary=summary, model=model, alleles=alleles)
-				if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-				if (returnCluster){ return(clusterData) }
-				if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
-			}
-		}else if ( dim(aa)[1] != 0 && dim(ab)[1] != 0 && dim(bb)[1] == 0){	# AA and AB 
-			# Ellipses for BAF calculation
-			aaBounds <- predict(ellipsoidhull(as.matrix(cbind(aa$t,aa$r))))
-			abBounds <- predict(ellipsoidhull(as.matrix(cbind(ab$t,ab$r))))
-			# Spline linear model for LRR calculation
-			temp <- lm(r ~ ns(t, Boundary.knots=c(median(aa$t),median(ab$t))), data=cc, model=FALSE)
-			model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
-			class(model) <- class(temp)
-			# Summary of medians and genotype counts
-			summary <- rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call)))
-			# Combine info and save/return
-			clusterData <- list(aaBounds=aaBounds, abBounds=abBounds, summary=summary, model=model, alleles=alleles)
-			if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-			if (returnCluster){ return(clusterData) }
-			if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
-		}else if ( dim(aa)[1] != 0 && dim(ab)[1] == 0 && dim(bb)[1] != 0){	# AA and BB 
-			# Ellipses for BAF calculation
-			aaBounds <- predict(ellipsoidhull(as.matrix(cbind(aa$t,aa$r))))
-			bbBounds <- predict(ellipsoidhull(as.matrix(cbind(bb$t,bb$r))))
-			# Spline linear model for LRR calculation
-			temp <- lm(r ~ ns(t, Boundary.knots=c(median(aa$t),median(bb$t))), data=cc, model=FALSE)
-			model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
-			class(model) <- class(temp)
-			# Summary of medians and genotype counts
-			summary <- rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call)))
-			# Combine info and save/return
-			clusterData <- list(aaBounds=aaBounds, bbBounds=bbBounds, summary=summary, model=model, alleles=alleles)
-			if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-			if (returnCluster){ return(clusterData) }
-			if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
-		}else if ( dim(aa)[1] == 0 && dim(ab)[1] != 0 && dim(bb)[1] != 0){	# AB and BB
-			abBounds <- predict(ellipsoidhull(as.matrix(cbind(ab$t,ab$r))))
-			bbBounds <- predict(ellipsoidhull(as.matrix(cbind(bb$t,bb$r))))
-			# Spline linear model for LRR calculation
-			temp <- lm(r ~ ns(t, knots=median(ab$t), Boundary.knots=c(median(ab$t),median(bb$t))), data=cc, model=FALSE)
-			model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
-			class(model) <- class(temp)
-			# Summary of medians and genotype counts
-			summary <- rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call)))
-			# Combine info and save/return
-			clusterData <- list(abBounds=abBounds, bbBounds=bbBounds, summary=summary, model=model, alleles=alleles)
-			if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-			if (returnCluster){ return(clusterData) }
-			if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
-		}else if ( dim(aa)[1] != 0 && dim(ab)[1] == 0 && dim(bb)[1] == 0){ # AA
-			# Ellipses for BAF calculation
-			aaBounds <- predict(ellipsoidhull(as.matrix(cbind(aa$t,aa$r))))
-			# Spline linear model for LRR calculation
-			temp <- lm(r ~ ns(t, Boundary.knots=c(min(aa$t),max(aa$t))), data=cc, model=FALSE)
-			model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
-			class(model) <- class(temp)
-			# Summary of medians and genotype counts
-			summary <- rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call)))
-			# Combine info and save/return
-			clusterData <- list(aaBounds=aaBounds, summary=summary, model=model, alleles=alleles)
-			if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-			if (returnCluster){ return(clusterData) }
-			if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
-		}else if ( dim(aa)[1] == 0 && dim(ab)[1] != 0 && dim(bb)[1] == 0){ # AB
-			# Ellipses for BAF calculation
-			abBounds <- predict(ellipsoidhull(as.matrix(cbind(ab$t,ab$r))))
-			# Spline linear model for LRR calculation
-			temp <- lm(r ~ ns(t, Boundary.knots=c(min(ab$t),max(ab$t))), data=cc, model=FALSE)
-			model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
-			class(model) <- class(temp)
-			# Summary of medians and genotype counts
-			summary <- rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call)))
-			# Combine info and save/return
-			clusterData <- list(abBounds=abBounds, summary=summary, model=model, alleles=alleles)
-			if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-			if (returnCluster){ return(clusterData) }
-			if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
-		}else if ( dim(aa)[1] == 0 && dim(ab)[1] == 0 && dim(bb)[1] != 0){ # BB
-			# Ellipses for BAF calculation
-			bbBounds <- predict(ellipsoidhull(as.matrix(cbind(bb$t,bb$r))))
-			# Spline linear model for LRR calculation
-			temp <- lm(r ~ ns(t, Boundary.knots=c(min(bb$t),max(bb$t))), data=cc, model=FALSE)
-			model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
-			class(model) <- class(temp)
-			# Summary of medians and genotype counts
-			summary <- rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call)))
-			# Combine info and save/return
-			clusterData <- list(bbBounds=bbBounds, summary=summary, model=model, alleles=alleles)
-			if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
-			if (returnCluster){ return(clusterData) }
-			if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
-		}else{
+		if (length(cc[,1])==0){
 			print(paste("WARNING: No data for",mySnp))
-			clusterData <- list(summary=NULL, model=NULL, alleles=alleles)
+			clusterData <- list(summary=NA, model=NA, alleles=alleles)
 			if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
 			if (returnCluster){ return(clusterData) }
 			if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=0)) }
+		}else{
+			summary <- data.frame(rbind(tapply(cc$t,as.character(cc$call),clusterStat),table(as.character(cc$call))))
+			if (length(summary)==3){	# All three genotypes have adequate data
+				aa <- ccList[[which(names(ccList)==paste(substr(alleles,1,1),substr(alleles,1,1),sep=""))]]
+				ab <- ccList[[which(names(ccList)==paste(substr(alleles,1,1),substr(alleles,2,2),sep=""))]]
+				bb <- ccList[[which(names(ccList)==paste(substr(alleles,2,2),substr(alleles,2,2),sep=""))]]
+				if ( median(ab$t) < median(aa$t) || median(ab$t) > median(bb$t) ){
+					# Theta value for heterozygote is smaller than AA homozygote or larger than BB homozygote so we don't want to call from this
+					clusterData <- list(model=NA, summary=NA, alleles=alleles)
+					if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
+					if (returnCluster){ return(clusterData) }
+					if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=0)) }
+				}else{
+					# Ellipses for BAF calculation
+					aaBounds <- predict(ellipsoidhull(as.matrix(cbind(aa$t,aa$r))))
+					abBounds <- predict(ellipsoidhull(as.matrix(cbind(ab$t,ab$r))))
+					bbBounds <- predict(ellipsoidhull(as.matrix(cbind(bb$t,bb$r))))
+					# Spline linear model for LRR calculation
+					temp <- lm(r ~ ns(t, knots=median(ab$t), Boundary.knots=c(median(aa$t),median(bb$t))), data=cc, model=FALSE)
+					model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
+					class(model) <- class(temp)
+					# Combine info and save/return
+					clusterData <- list(aaBounds=aaBounds, abBounds=abBounds, bbBounds=bbBounds, summary=summary, model=model, alleles=alleles)
+					if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
+					if (returnCluster){ return(clusterData) }
+					if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
+				}
+			}else if (length(summary)==2){	# Only two genotypes have adequate data
+				a <- ccList[[which(names(ccList)==names(summary)[1])]]
+				b <- ccList[[which(names(ccList)==names(summary)[2])]]
+				# Ellipses for BAF calculation
+				aBounds <- predict(ellipsoidhull(as.matrix(cbind(a$t,a$r))))
+				bBounds <- predict(ellipsoidhull(as.matrix(cbind(b$t,b$r))))
+				# Spline linear model for LRR calculation
+				temp <- lm(r ~ ns(t, Boundary.knots=c(median(a$t),median(b$t))), data=cc, model=FALSE)
+				model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
+				class(model) <- class(temp)
+				clusterData <- list(aBounds=aBounds, bBounds=bBounds, summary=summary, model=model, alleles=alleles)
+				# Combine info and save/return
+				if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
+				if (returnCluster){ return(clusterData) }
+				if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
+			}else if (length(summary)==1){	# Only one genotype has adequate data
+				a <- ccList[[which(names(ccList)==names(summary)[1])]]
+				# Ellipses for BAF calculation
+				aBounds <- predict(ellipsoidhull(as.matrix(cbind(a$t,a$r))))
+				# Spline linear model for LRR calculation
+				temp <- lm(r ~ ns(t, Boundary.knots=c(min(a$t),max(a$t))), data=cc, model=FALSE)
+				model <- temp[match(c("coefficients","rank","qr","terms"),names(temp))]
+				class(model) <- class(temp)
+				# Combine info and save/return
+				clusterData <- list(aBounds=aBounds, summary=summary, model=model, alleles=alleles)
+				if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
+				if (returnCluster){ return(clusterData) }
+				if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=sum(summary[2,]))) }
+			}else{
+				print(paste("WARNING: No data for",mySnp))
+				clusterData <- list(summary=NA, model=NA, alleles=alleles)
+				if (saveCluster){ save(clusterData, file=paste(DIR,"/clusterFile-",mySnp,".RData",sep=""), compression_level=9) }
+				if (returnCluster){ return(clusterData) }
+				if (returnInfo){ return(cbind(SNP=mySnp, FLAG="P", N_SAMPLES=0)) }
+			}
 		}
 	}
 }
