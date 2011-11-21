@@ -5,7 +5,7 @@ Version: 0.8
 Date: 2011-11-11
 Author: Katherine I. Morley and Tomas Fitzgerald
 Maintainer: <km5@sanger.ac.uk>
-Depends: ggplot2, splines
+Depends: ggplot2, splines, cluster, sp
 Description: Part of this package is dependent on the output of the Sanger GAPI genotyping pipeline, specifically the normalised intensity files and genotype call/confidence files.
 License: Artistic
 Packaged: 2011-05-03 22:40:54 UTC; km5
