@@ -36,7 +36,7 @@ callLRRBAF <- function(gapiGTU, gapiINTU, clusterPATH, CHR, minClusterSize=1, ke
 		names(t) <- namesA
 		if (sum(row.names(GTU) == namesA) == length(namesA)){
 			results <- cbind(data.frame(r,t), GTU)	# This is the input data - R, theta, genotype call, confidence
-			callData <- calculations(results, mySnp, clusterPATH, CHR, minClusterSize)	# This is the LRR and BAF called from the canonical clusters
+			callData <- calculations(results, mySnp, clusterPATH, CHR, minClusterSize, keepOriginal)	# This is the LRR and BAF called from the canonical clusters
 			return(callData)
 		}else{
 			stop("Different samples in intensity and genotype files.")
@@ -47,6 +47,7 @@ callLRRBAF <- function(gapiGTU, gapiINTU, clusterPATH, CHR, minClusterSize=1, ke
 }
 	
 calculations <- function(target, SNP, clusterPATH, CHR, minClusterSize, keepOriginal=FALSE){
+	print(SNP)
 	if (sum(is.na(target))==1){
 		return(NA)
 	}else{
@@ -63,192 +64,77 @@ calculations <- function(target, SNP, clusterPATH, CHR, minClusterSize, keepOrig
 		}
 		# Call LRR and BAF for samples
 		if (sum(is.na(clusterData$summary))==1){
-			target <- cbind(target,rPred="NA",lrr="NA",baf="NA")
+			target <- cbind(target,rPred=NA,lrr=NA,baf=NA)
 		}else if (min(clusterData$summary[2,]) < minClusterSize){	# If we do not have enough samples, return nothing for this SNP
-			target <- cbind(target,rPred="NA",lrr="NA",baf="NA")
+			target <- cbind(target,rPred=NA,lrr=NA,baf=NA)
 		}else{
 			# LRR calculations
 			target <- cbind(target,rPred=predict(clusterData$model,target))
 			use <- as.character(target$call) %in% names(data.frame(clusterData$summary))	# Which ones have genotypes seen in the canonical clusters
-			target$rPred <- as.numeric(ifelse(use==T,target$rPred,"NA"))			# Set to missing samples with genotypes not seen in canonical clusters (will catch NN as these excluded from clusters)
+			target$rPred <- as.numeric(ifelse(use==T,target$rPred,NA))			# Set to missing samples with genotypes not seen in canonical clusters (will catch NN as these excluded from clusters)
 			target <- cbind(target,lrr=log2(target$r/target$rPred))					# Generate log2R	
 			# BAF calculations
-			targetTest <- function(target){
+			bafTest <- function(target){
 				if (is.na(target[3])){	# If no genotype call made, return NA
 					return(NA)
-				}else{
-					if (length(clusterData$summary[1,])==3){	# If there were three genotype groups in the canonical clusters
-						if ( point.in.polygon(target[2], target[1], clusterData$aaBounds[,1], clusterData$aaBounds[,2]) ){	# Point within AA cluster
-							if (target[3]==paste(substr(clusterData$alleles,1,1),substr(clusterData$alleles,1,1),sep="")){	# Genotype call same as canonical cluster
-								return(0)
-							}else{
-								return(NA)
-							}
-						}else if ( point.in.polygon(target[2], target[1], clusterData$abBounds[,1], clusterData$abBounds[,2]) ){ # Point within AB cluster
-							if (target[3]==paste(substr(clusterData$alleles,1,1),substr(clusterData$alleles,2,2),sep="")){	# Genotype call same as canonical cluster
-								return(0.5)
-							}else{
-								return(NA)
-							}
-						}else if ( point.in.polygon(target[2], target[1], clusterData$bbBounds[,1], clusterData$bbBounds[,2]) ){ # Point within BB cluster
-							if ( target[3]==paste(substr(clusterData$alleles,2,2),substr(clusterData$alleles,2,2),sep="") ){	# Genotype call same as canonical cluster
-								return(1)
-							}else{
-								return(NA)
-							}
+				}else if (unlist(target[3]) %in% names(clusterData$summary)==FALSE){	# Have we seen this genotype in the canonical clusters?	
+					return(NA)
+				}else if (!is.na(sum(clusterData[[which(names(clusterData)==target[3])]]))){	# If we did not generate an ellipse for the genotype seen in the target sample
+					bounds <- clusterData[[which(names(clusterData)==target[3])]]
+					if (point.in.polygon(target[2], target[1], bounds[,1], bounds[,2])){	# Is target sample point within ellipse?
+						return(clusterData$summary[3,names(clusterData$summary)==target[3]])
+					}else{
+						if (clusterData$summary[3,names(clusterData$summary)==target[3]]==0 && as.numeric(target[2]) < as.numeric(clusterData$summary[1,names(clusterData$summary)==target[3]])){ # AA with negative theta
+							return(0)
+						}else if (clusterData$summary[3,names(clusterData$summary)==target[3]]==1 && as.numeric(target[2]) >= as.numeric(clusterData$summary[1,names(clusterData$summary)==target[3]])){ # BB with larget positive theta
+							return(1)
 						}else{
-							theta <- as.numeric(clusterData$summary[1,])
-							if (target[3]==paste(substr(clusterData$alleles,1,1),substr(clusterData$alleles,1,1),sep="") && target[2] < 0){	# AA with negative theta
-								return(0)
-							}else if (target[3]==paste(substr(clusterData$alleles,2,2),substr(clusterData$alleles,2,2),sep="") && target[2] > 1){ # BB with large positive theta
-								return(1)
-							}else if (as.numeric(target[2]) < theta[1]){	# Positive theta value in space between AA and AB
-								value <- 0.5*((as.numeric(target[2]) - theta[1])/(theta[2] - theta[1]))
-								return( ifelse(value < 0, 0, value) )	# Return interpolated value
-							}else if (as.numeric(target[2]) > theta[2]){ # Positive theta value in space between AB and BB
-								value <- 0.5+0.5*((as.numeric(target[2]) - theta[2])/(theta[3] -theta[2]))
-								return( ifelse(value > 1, 1, value) )
-							}else{
-								return(NA)
-							} 
-						} 
-					}else if (length(clusterData$summary[1,])==2){	# If there were two genotype groups in the canonical clusters
-						if (clusterData$alleles %in% names(clusterData$summary)){	# XX and XY
-							XX <- subset(clusterData$summary, select=names(clusterData$summary) != clusterData$alleles)
-							XY <- subset(clusterData$summary, select=names(clusterData$summary) == clusterData$alleles)
-						 	if ( point.in.polygon(target[2], target[1], clusterData$bBounds[,1], clusterData$bBounds[,2]) ){ # Point within XY cluster
-								if (target[3]==names(XY)){	# Genotype call same as canonical cluster
-									return(0.5)
+							theta <- clusterData$summary[1,]
+							names(theta) <- names(clusterData$summary)
+							if (length(clusterData$summary)==3){
+								if (as.numeric(target[2]) < theta[which(names(theta)==clusterData$alleles)]){	# Positive theta value in space between AA and AB
+									value <- 0.5*((as.numeric(target[2]) - theta[which(theta==min(theta))])/(theta[which(names(theta)==clusterData$alleles)] - theta[which(theta==min(theta))]))
+									return( ifelse(value < 0, 0, value) )	# Return interpolated value
+								}else if (as.numeric(target[2]) >= theta[which(names(theta)==clusterData$alleles)]){ # Positive theta value in space between AB and BB
+									value <- 0.5+0.5*((as.numeric(target[2]) - theta[which(names(theta)==clusterData$alleles)])/(theta[which(theta==max(theta))] - theta[which(names(theta)==clusterData$alleles)]))
+									return( ifelse(value > 1, 1, value) )
 								}else{
 									return(NA)
-								}
-							}else if (XX[1,1] < XY[1,1]){	# XX BAF is 0
-								if ( point.in.polygon(target[2], target[1], clusterData$aBounds[,1], clusterData$aBounds[,2]) ){	# Point within XX cluster
-									if (target[3]==names(XX)){	# Genotype call same as canonical cluster
-										return(0)
+								} 
+							}else if (length(clusterData$summary)==2){
+								if (theta[which(names(theta)==clusterData$alleles)] == max(theta)){	# Can only evaluate between AA and AB
+									if (target[2] <= theta[which(names(theta)==clusterData$alleles)]){	# Point falls in valid space
+										value <- 0.5*( ( as.numeric(target[2]) - theta[which(names(theta)!=clusterData$alleles)] ) / ( theta[which(names(theta)==clusterData$alleles)] - theta[which(names(theta)!=clusterData$alleles)] ) )
+										return( ifelse(value < 0, 0, value) )	# Return interpolated value	
 									}else{
 										return(NA)
 									}
-								}else{
-									theta <- as.numeric(clusterData$summary[1,])
-									if ((target[3] %in% names(clusterData$summary))==FALSE){	# Ensure we don't call BAF for genotype not seen in canonical clusters
-										return(NA)
-									}else if (target[3]==names(XX) && target[2] < 0){	# AA with negative theta
-										return(0)
-									}else if (as.numeric(target[2]) < theta[1]){	# Positive theta value in space between AA and AB
-										value <- 0.5*((as.numeric(target[2]) - theta[1])/(theta[2] - theta[1]))
-										return( ifelse(value < 0, 0, value) )	# Return interpolated value
-									}else{
-										return(NA)
-									} 
-								}
-							}else if (XX[1,1] >= XY[1,1]){	# XX BAF is 1
-								if ( point.in.polygon(target[2], target[1], clusterData$aBounds[,1], clusterData$aBounds[,2]) ){	# Point within XX cluster
-									if (target[3]==names(XX)){	# Genotype call same as canonical cluster
-										return(1)
-									}else{
-										return(NA)
-									}
-								}else{
-									theta <- as.numeric(clusterData$summary[1,])
-									if ((target[3] %in% names(clusterData$summary))==FALSE){	# Ensure we don't call BAF for genotype not seen in canonical clusters
-										return(NA)
-									}else if (target[3]==names(XX) && target[2] > 1){ # BB with large positive theta
-										return(1)
-									}else if (as.numeric(target[2]) > theta[2]){ # Positive theta value in space between AB and BB
-										value <- 0.5+0.5*((as.numeric(target[2]) - theta[2])/(theta[3] -theta[2]))
+								}else if (theta[which(names(theta)==clusterData$alleles)] == min(theta)){ # Can only evaluate between AB and BB
+									if (target[2] >= theta[which(names(theta)==clusterData$alleles)]){
+										value <- 0.5 + 0.5*( ( as.numeric(target[2]) - theta[which(names(theta)==clusterData$alleles)] )/( theta[which(names(theta)!=clusterData$alleles)] - theta[which(names(theta)==clusterData$alleles)] ) )
 										return( ifelse(value > 1, 1, value) )
 									}else{
 										return(NA)
-									} 
-									
-								}
-							}else{	# Fail
-								return(NA)
-							}
-						}else{ # XX & YY
-							XX <- clusterData$summary[,1]
-							YY <- clusterData$summary[,2]
-							if (XX[1,1] < YY[1,1]){
-								if ( point.in.polygon(target[2], target[1], clusterData$aBounds[,1], clusterData$aBounds[,2]) ){	# Point within XX cluster
-									if (target[3]==names(XX)){	# Genotype call same as canonical cluster
-										return(0)
-									}else{
-										return(NA)
-									}
-								}else if ( point.in.polygon(target[2], target[1], clusterData$bBounds[,1], clusterData$bBounds[,2]) ){ # Point within YY cluster
-									if (target[3]==names(YY)){	# Genotype call same as canonical cluster
-										return(1)
-									}else{
-										return(NA)
 									}
 								}else{
-									theta <- as.numeric(clusterData$summary[1,])
-									if (target[3]==clusterData$alleles){	# Ensure we don't call BAF for genotype not seen in canonical clusters
-										return(NA)
-									}else if (target[3]==names(XX) && target[2] < 0){	# XX with negative theta
-										return(0)
-									}else if (target[3]==names(YY) && target[2] > 1){ # BB with large positive theta
-										return(1)
-									}else{		# Cannot interpolate as no AB cluster
-										return(NA)
-									}
-								}  
-							}else if (YY[1,1] >= XX[1,1]){
-								if ( point.in.polygon(target[2], target[1], clusterData$aBounds[,1], clusterData$aBounds[,2]) ){	# Point within XX cluster
-									if (target[3]==names(XX)){	# Genotype call same as canonical cluster
-										return(1)
-									}else{
-										return(NA)
-									}
-								}else if ( point.in.polygon(target[2], target[1], clusterData$bBounds[,1], clusterData$bBounds[,2]) ){ # Point within YY cluster
-									if (target[3]==names(YY)){	# Genotype call same as canonical cluster
-										return(0)
-									}else{
-										return(NA)
-									}
-								}else{
-									theta <- as.numeric(clusterData$summary[1,])
-									if (target[3]==clusterData$alleles){	# Ensure we don't call BAF for genotype not seen in canonical clusters
-										return(NA)
-									}else if (target[3]==names(YY) && target[2] < 0){	# XX with negative theta
-										return(0)
-									}else if (target[3]==names(XX) && target[2] > 1){ # BB with large positive theta
-										return(1)
-									}else{		# Cannot interpolate as no AB cluster
-										return(NA)
-									}
+									return(NA)
 								}
-							}else{	# Fail
+							}else{	# If cluster only has one cloud, can't interpolate
 								return(NA)
 							}
-						}
-					}else if (length(clusterData$summary[1,])==1){
-						if ( point.in.polygon(target[2], target[1], clusterData$aBounds[,1], clusterData$aBounds[,2]) ){	# Point within XX cluster
-							if (target[3]==names(clusterData$summary)){	# Genotype call same as canonical cluster
-								if (clusterData$alleles==names(clusterData$summary)){
-									return(0.5)
-								}else if (names(clusterData$summary)==paste(substr(clusterData$alleles,1,1),substr(clusterData$alleles,1,1),sep="")){
-									return(0)
-								}else{
-									return(1)
-								}
-							}else{
-								return(NA)
-							}
-						}else{
-							return(NA)
 						}
 					}
+				}else{	# Genotype doesn't exist in canonical cluster so cannot return value
+					return(NA)
 				}
 			}
-			baf <- apply(target, 1, targetTest)
-			target <- cbind(target,baf)
-		}
-		if (keepOriginal){
-			return(target)
-		}else{
-			return(subset(target,select=c(lrr,baf)))
+			baf <- apply(target, 1, bafTest)
+			target <- cbind(target,baf=unlist(baf))
+			if (keepOriginal){
+				return(target)
+			}else{
+				return(subset(target,select=c(lrr,baf)))
+			}
 		}
 	}
 }
