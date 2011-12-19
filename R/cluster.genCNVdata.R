@@ -30,7 +30,6 @@ cluster.genCNVdata <- function(gapiGTU, gapiINTU, clusterPATH, CHR, minClusterSi
 			if (sum(is.na(target))==1){
 				return(NA)
 			}else{
-print(SNP)
 				# Load canonical clusters for SNP
 				if (file.exists(paste(clusterPATH,"/",CHR,"/clusterFile-",SNP,".RData",sep=""))){
 					loadCluster <- try(load(paste(clusterPATH,"/",CHR,"/clusterFile-",SNP,".RData",sep="")))
@@ -41,7 +40,7 @@ print(SNP)
 				}else{
 					print(paste("Canonical cluster file for SNP ",SNP," not found at ",clusterPATH,"/",CHR,"/clusterFile-",SNP,".RData",sep=""))
 					return(cData <- list(m=NULL,s=NULL))
-				}		
+				}	
 				# Call LRR and BAF for samples		
 				if (sum(is.na(cData$s))==1){
 					target <- cbind(target,rPred=NA,lrr=NA,baf=NA)
@@ -51,7 +50,7 @@ print(SNP)
 					# LRR calculations
 					target <- cbind(target,rPred=predict(cData$m,target))
 					use <- as.character(target$call) %in% names(data.frame(cData$s))	# Which ones have genotypes seen in the canonical clusters
-					use <- ifelse(use==F & as.numeric(as.character(target$t)) <= max(cData$s[row.names(cData$s)=="max_a",]) & as.numeric(as.character(target$t)) >= min(cData$s[row.names(cData$s)=="min_a",]), TRUE, use)
+					use <- ifelse(use==F & as.numeric(as.character(target$t)) <= max(cData$s[row.names(cData$ss)=="max",]) & as.numeric(as.character(target$t)) >= min(cData$s[row.names(cData$ss)=="min",]), TRUE, use)
 					target$rPred <- as.numeric(ifelse(use==T,target$rPred,NA))								# Set to missing samples with no genotype and theta values outside those seen in canonical samples
 					target <- cbind(target,lrr=log2(target$r/target$rPred))									# Generate log2R	
 					# BAF calculations
