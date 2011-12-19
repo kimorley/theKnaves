@@ -1,4 +1,4 @@
-plotCluster <- function(CHR, SNP, targetIntu, targetGtu, outDIR=getwd(), save=F, print=T){
+plotCluster <- function(CHR, SNP, targetINTU, targetGTU, clusterPATH, clusterDATA, outDIR=getwd(), save=F, print=T){
 	# Checks
 	if (missing(CHR)){
 		stop("Supply chromosome on which SNP is located.")
@@ -7,19 +7,22 @@ plotCluster <- function(CHR, SNP, targetIntu, targetGtu, outDIR=getwd(), save=F,
 		stop("Supply SNP for which clusters are to be plotted.")
 	}
 	# Load model for SNP
-	if (file.exists(paste("/nfs/ddd0/Data/snp-cnv/canonical/clusters/chr",CHR,"/clusterFile-",SNP,".RData",sep=""))){
-		loadCluster <- try(load(paste("/nfs/ddd0/Data/snp-cnv/canonical/clusters/chr",CHR,"/clusterFile-",SNP,".RData",sep="")))
+	# Load canonical cluster for SNP
+	if (file.exists(paste(clusterPATH,"/chr",CHR,"/clusterFile-",SNP,".RData",sep=""))){
+		loadCluster <- try(load(paste(clusterPATH,"/chr",CHR,"/clusterFile-",SNP,".RData",sep="")))
 		if (inherits(loadCluster, 'try-error')){
-			stop("Canonical cluster file for SNP ",SNP," does not exist in specified location.")
+			print(paste("Canonical cluster file for SNP ",SNP," does not exist in specified location.",sep=""))
+			return(clusterData <- list(model=NULL,summary=NULL))
 		}
 	}else{
-		stop("Canonical cluster file for SNP ",SNP," does not exist in specified location.")
+		print(paste("Canonical cluster file for SNP ",SNP," does not exist in specified location.",sep=""))
+		return(clusterData <- list(model=NULL,summary=NULL))
 	}
 	# Read target data
-	target <- convertRawSnp(SNP,targetIntu, targetGtu)
+	target <- convertRawSnp(SNP,targetINTU, targetGTU)
 	data <- target[[1]]
 	# Read reference data
-	ref <- convertRawSnp(SNP,paste("/nfs/ddd0/Data/snp-cnv/canonical/intu/scot-founders-",CHR,".intu",sep=""),paste("/nfs/ddd0/Data/snp-cnv/canonical/gtu/scot-founders-",CHR,".gtu",sep=""))
+	ref <- convertRawSnp(SNP,paste(clusterDATA,"/intu/scot-founders-",CHR,".intu",sep=""),paste(clusterDATA,"/gtu/scot-founders-",CHR,".gtu",sep=""))
 	reftemp <- ref[[1]]
 	refdata <- subset(reftemp, call != "NN" & as.numeric(as.character(conf)) >= 0.99)
 	# Plotting data	
@@ -30,7 +33,7 @@ plotCluster <- function(CHR, SNP, targetIntu, targetGtu, outDIR=getwd(), save=F,
 			layer(
 					data = refdata, mapping = aes(x = t, y = r, colour = call), 
 					alpha = 0.1,
-					geom = "point"
+					geom = "point"				
 			) +
 			layer(
 					data = data, mapping = aes(x = t, y = r, colour = call),
@@ -39,6 +42,24 @@ plotCluster <- function(CHR, SNP, targetIntu, targetGtu, outDIR=getwd(), save=F,
 			layer(
 					data = testData, mapping = aes(x = t, y = r),
 					geom = "line"
+			) +
+			layer(
+					data= het, mapping = aes(x = x, y = y),
+					size = 0.5,
+					linetype = 2,
+					geom = "path"
+			) +
+			layer(
+					data= hom1, mapping = aes(x = x, y = y),
+					size = 0.5,
+					linetype = 2,
+					geom = "path"
+			) +
+			layer(
+					data= hom2, mapping = aes(x = x, y = y),
+					size = 0.5,
+					linetype = 2,
+					geom = "path"
 			) +
 			scale_colour_brewer(palette="Set1") + ylab("R") + xlab(expression(theta)) + opts(title = SNP)
 	if (print){

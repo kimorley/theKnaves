@@ -50,7 +50,7 @@ readSnpIntu <- function(SNP,clusterINTU){
 	cmd <- paste( "awk '{ if (NR==1 || $1 == \"" ,SNP, "\") print $0 }' " ,clusterINTU, sep="")
 	data <- try(read.table(pipe(cmd),h=T,row.names=1, colClasses="character"))
 	if (inherits(data, 'try-error')){
-		return(list(map=NA, intu=NA))
+		return(NULL)
 	}else{
 		if (sum(names(data)[1:2] == c("Coor", "Alleles")) != 2){
 			stop("Coor and Alleles expected as headers in first two columns after SNP.")
@@ -69,7 +69,7 @@ readSnpGtu <- function(SNP,clusterGTU,splitIDs=TRUE){
 	cmd <- paste( "awk '{ if (NR==1 || $1 == \"" ,SNP, "\") print $0 }' " ,clusterGTU, sep="")
 	data <- try(read.table(pipe(cmd),h=T,row.names=1, colClasses="character"))
 	if (inherits(data, 'try-error')){
-		return(NA)
+		return(NULL)
 	}else{
 		temp <- data.frame(t(data))
 		splitter <- function(x){
